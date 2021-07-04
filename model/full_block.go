@@ -2,7 +2,6 @@ package model
 
 import "github.com/Expandergraph/crypto-crawler/dao"
 
-// 根据文档定义出区块信息的结构体
 type FullBlock struct {
 	Number           string            `json:"number"`
 	Hash             string            `json:"hash"`

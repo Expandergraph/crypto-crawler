@@ -34,7 +34,7 @@ func runDaemon(cc *cli.Context) error {
 	intrh, ctx := setupInterruptHandler(bgctx)
 	defer intrh.Close()
 
-	log.Info("start pangolin daemon ...")
+	log.Info("start crawler daemon ...")
 	rootPath, err := config.PathRoot()
 	if err != nil {
 		return errors.Wrap(err, "failed on get root path")
@@ -45,7 +45,7 @@ func runDaemon(cc *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed on load config info")
 	}
-	fmt.Println(cfg)
+
 	ch := make(chan string)
 	go func() {
 		<-ctx.Done()
