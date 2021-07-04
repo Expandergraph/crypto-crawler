@@ -2,7 +2,10 @@ package collector
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/Expandergraph/crypto-crawler/database"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -19,21 +22,22 @@ const (
 type Manager struct {
 	ctx context.Context
 
-	requester *rpc.ETHRPCRequester
-
+	requester    *rpc.ETHRPCRequester
+	db           *database.DB
 	currentBlock uint64
 }
 
-func New(ctx context.Context, url string) *Manager {
+func New(ctx context.Context, db *database.DB, url string) *Manager {
 	requester := rpc.NewETHRPCRequester(url)
 
 	return &Manager{
 		ctx:       ctx,
+		db:        db,
 		requester: requester,
 	}
 }
 
-func (m *Manager) watch() error {
+func (m *Manager) Run() error {
 	ticker := time.NewTicker(DefaultPollingInterval)
 	for {
 		select {
@@ -53,13 +57,19 @@ func (m *Manager) SyncToLatestBlock() error {
 	if err != nil {
 		return errors.Wrap(err, "failed on get latest block number")
 	}
-	//read and parse block
-	for i := m.currentBlock; i <= number.Uint64(); i++ {
+
+	syncedBlock, err := m.db.QuerySyncedBlock()
+	if err != nil {
+		return errors.Wrap(err, "failed on get synced block number")
+	}
+
+	for i := syncedBlock; i <= number.Uint64(); i++ {
 		err := m.GetFullBlockByNumber()
 		if err != nil {
 			return errors.Wrap(err, "failed on get block by number")
 		}
 	}
+
 	//write to db
 	return nil
 }
@@ -82,5 +92,6 @@ func (m *Manager) GetFullBlockByNumber() error {
 	if err != nil {
 		return errors.Wrap(err, "failed on get logs")
 	}
+	fmt.Println(len(logs))
 	return nil
 }

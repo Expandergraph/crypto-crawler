@@ -10,6 +10,9 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/Expandergraph/crypto-crawler/collector"
+	"github.com/Expandergraph/crypto-crawler/database"
+
 	"github.com/pkg/errors"
 
 	"github.com/Expandergraph/crypto-crawler/config"
@@ -45,6 +48,14 @@ func runDaemon(cc *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed on load config info")
 	}
+
+	db, err := database.New(cfg.DBInfo)
+	if err != nil {
+		return errors.Wrap(err, "failed on create db")
+	}
+
+	mgr := collector.New(ctx, db, cfg.Infura.Token)
+	mgr.Run()
 
 	ch := make(chan string)
 	go func() {
