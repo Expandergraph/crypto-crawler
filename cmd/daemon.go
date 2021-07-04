@@ -6,8 +6,13 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
+
+	"github.com/pkg/errors"
+
+	"github.com/Expandergraph/crypto-crawler/config"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -29,6 +34,18 @@ func runDaemon(cc *cli.Context) error {
 	intrh, ctx := setupInterruptHandler(bgctx)
 	defer intrh.Close()
 
+	log.Info("start pangolin daemon ...")
+	rootPath, err := config.PathRoot()
+	if err != nil {
+		return errors.Wrap(err, "failed on get root path")
+	}
+
+	log.WithFields(log.Fields{"dir": rootPath}).Info("root path")
+	cfg, err := config.LoadConfig(filepath.Join(rootPath, config.ConfigName))
+	if err != nil {
+		return errors.Wrap(err, "failed on load config info")
+	}
+	fmt.Println(cfg)
 	ch := make(chan string)
 	go func() {
 		<-ctx.Done()

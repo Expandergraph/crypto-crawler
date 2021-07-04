@@ -24,6 +24,13 @@ func main() {
 			Usage:  "Start a basic daemon process",
 			Action: cmd.Daemon,
 		},
+		{
+			Name:  "init",
+			Usage: "Init daemon process",
+			Action: func(ctx *cli.Context) error {
+				return cmd.DoInit()
+			},
+		},
 	}
 
 	err := app.Run(os.Args)
