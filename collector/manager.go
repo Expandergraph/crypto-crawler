@@ -2,7 +2,7 @@ package collector
 
 import (
 	"context"
-	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/Expandergraph/crypto-crawler/database"
@@ -53,7 +53,7 @@ func (m *Manager) Run() error {
 }
 
 func (m *Manager) SyncToLatestBlock() error {
-	number, err := m.requester.GetLatestBlockNumber()
+	latestNumber, err := m.requester.GetLatestBlockNumber()
 	if err != nil {
 		return errors.Wrap(err, "failed on get latest block number")
 	}
@@ -63,26 +63,26 @@ func (m *Manager) SyncToLatestBlock() error {
 		return errors.Wrap(err, "failed on get synced block number")
 	}
 
-	for i := syncedBlock; i <= number.Uint64(); i++ {
-		err := m.GetFullBlockByNumber()
+	for i := syncedBlock; i <= latestNumber.Uint64(); i++ {
+		block, logs, err := m.ProcessBlockByNumber(int64(i))
 		if err != nil {
 			return errors.Wrap(err, "failed on get block by number")
 		}
+
+		//write to db
+		if err := m.db.UpdateSyncedBlock(block, logs); err != nil {
+			return errors.Wrapf(err, "failed update block %d to db", i)
+		}
+		log.WithFields(log.Fields{"module": module, "block": i}).Info("sync block successfully")
 	}
 
-	//write to db
 	return nil
 }
 
-func (m *Manager) GetFullBlockByNumber() error {
-	number, err := m.requester.GetLatestBlockNumber()
+func (m *Manager) ProcessBlockByNumber(number int64) (*model.FullBlock, []model.Log, error) {
+	fullBlock, err := m.requester.GetBlockInfoByNumber(big.NewInt(number))
 	if err != nil {
-		return errors.Wrap(err, "failed on get latest block number")
-	}
-
-	fullBlock, err := m.requester.GetBlockInfoByNumber(number)
-	if err != nil {
-		return errors.Wrap(err, "failed on get full block info")
+		return nil, nil, errors.Wrap(err, "failed on get full block info")
 	}
 
 	logs, err := m.requester.EthGetLogs(model.FilterParams{
@@ -90,8 +90,8 @@ func (m *Manager) GetFullBlockByNumber() error {
 		ToBlock:   fullBlock.Number,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed on get logs")
+		return nil, nil, errors.Wrap(err, "failed on get logs")
 	}
-	fmt.Println(len(logs))
-	return nil
+
+	return fullBlock, logs, nil
 }
